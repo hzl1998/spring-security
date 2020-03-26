@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hzl.springsecurity.mapper.UserMapper">
+	<select id="getUserByUserName" resultType="com.hzl.springsecurity.model.UserDto">
+        select * from user where username = #{username}
+    </select>
+
+    <select id="findPermissionByUserId" resultType="com.hzl.springsecurity.model.Permission">
+        SELECT * FROM `permission` where id in(select pid from role_permission where rid in(select rid from user_role where uid = #{id}))
+    </select>
+</mapper>
+
+
+
+
