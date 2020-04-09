@@ -1,53 +1,73 @@
 package com.hzl.springsecurity.config;
 
+import com.hzl.springsecurity.common.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity //启用Spring Security
 @EnableGlobalMethodSecurity(prePostEnabled = true) //会拦截注解了@PreAuthrize注解的配置
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
+    @Autowired
+    AuthExceptionEntryPoint authExceptionEntryPoint;
+
+    @Autowired
+    HzlAuthenticationSuccessHandler authenticationSuccessHandler;  // 登录成功返回的 JSON 格式数据给前端（否则为 html）
+
+    @Autowired
+    HzlAuthenticationFailureHandler authenticationFailureHandler;  //  登录失败返回的 JSON 格式数据给前端（否则为 html）
+
+    @Autowired
+    HzlLogoutSuccessHandler logoutSuccessHandler;  // 注销成功返回的 JSON 格式数据给前端（否则为 登录时的 html）
+
+    @Autowired
+    HzlAccessDeniedHandler accessDeniedHandler;    // 无权访问返回的 JSON 格式数据给前端（否则为 403 html 页面）
+
+    @Autowired
+    private LoginValidateAuthenticationProvider loginValidateAuthenticationProvider;
+
+    @Autowired
+    LindTokenAuthenticationFilter lindTokenAuthenticationFilter;
+
     //安全拦截机制
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable() //屏蔽CSRF控制
+                .httpBasic().authenticationEntryPoint(authExceptionEntryPoint)
+                .and()
                 .authorizeRequests()
-//                .antMatchers("/r/r1").hasAnyAuthority("/r/r1")//需要/r/r1权限，基于url授权，开启方法授权时不必使用
-//                .antMatchers("/r/r2").hasAnyAuthority("/r/r2")//需要/r/r2权限，基于url授权，开启方法授权时不必使用
                 .antMatchers("/r/**").authenticated()//所有的/r/**的请求必须认证通过
                 .anyRequest().permitAll()//除了/r/**，其他的请求可以访问
                 .and()
-                .formLogin()//允许表单登录
-                .loginPage("/login-view")//自定义登录页面
+                .formLogin()
                 .loginProcessingUrl("/login")
-                .successForwardUrl("/login-success")//自定义登录成功的页面地址
-                .and()
-                .sessionManagement()
-                //生成session，IF_REQUIRED（默认）登录时创建，ALWAYS如果没有session存在就创建一个，
-                //NEVER，springsecurity将不会创建session，但是如果应用中其他地方创建了session，那么springsecurity将会使用它
-                //STATELESS,springsecurity将绝对不会创建session，也不使用session
-                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                .and()
-                .logout()
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login-view?logout");//自定义退出登录成功的页面地址
+                .successHandler(authenticationSuccessHandler)
+                .failureHandler(authenticationFailureHandler)
+                .permitAll();
+        http.logout().logoutSuccessHandler(logoutSuccessHandler);
+        http.addFilterBefore(lindTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.exceptionHandling().accessDeniedHandler(accessDeniedHandler);
     }
 
     @Bean //注入PasswordEncoder
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
+    }
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        //自定义验证密码
+        auth.authenticationProvider(loginValidateAuthenticationProvider);
     }
 }

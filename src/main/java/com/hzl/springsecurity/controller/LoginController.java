@@ -1,29 +1,28 @@
 package com.hzl.springsecurity.controller;
 
+import com.hzl.springsecurity.mapper.UserMapper;
+import com.hzl.springsecurity.model.UserDto;
+import com.hzl.springsecurity.service.UserService;
+import com.hzl.springsecurity.util.MD5;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
 
 @RestController
 public class LoginController {
 
-    @RequestMapping(value = "/login-success",produces = {"text/plain;charset=UTF-8"})
-    public String loginSuccess(){
-        return getUserName()+"登录成功";
-    }
+    @Autowired
+    private UserService userService;
 
-    @GetMapping(value = "/logout",produces = {"text/plain;charset=UTF-8"})
-    public String logout(HttpSession session){
-        session.invalidate();
-        return getUserName()+"退出成功";
-    }
+    @Autowired
+    private UserMapper userMapper;
 
     @GetMapping(value = "/r/r1",produces = {"text/plain;charset=UTF-8"})
     @PreAuthorize("hasAuthority('/r/r1')")
@@ -36,6 +35,7 @@ public class LoginController {
     public String r2(){
         return getUserName()+"访问资源2";
     }
+
 
     //获取当前用户信息
     private String getUserName(){

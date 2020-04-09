@@ -12,4 +12,5 @@ public class UserDto {
     private String password;
     private String fullname;
     private String mobile;
+    private String salt;
 }
